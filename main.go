@@ -30,11 +30,12 @@ func main() {
 
 // Node ...
 type Node struct {
-	Payload interface{}      `json:"payload,omitempty"`
+	Path    string           `json:"path,omitempty"`
 	Name    string           `json:"name,omitempty"`
 	Value   string           `json:"value,omitempty"`
 	End     bool             `json:"end,omitempty"`
 	Child   map[string]*Node `json:"child,omitempty"`
+	Payload interface{}      `json:"payload,omitempty"`
 }
 
 // NewNode returns reference to new Node
@@ -64,14 +65,18 @@ func (dt *DigitalTree) Add(word string, payload interface{}) {
 	found, _ := dt.Find(word)
 	if !found {
 		node := dt.Root
+		var path string
 
 		for _, letter := range word {
 			char := string(letter)
 			_, found := node.Child[char]
 			if found {
+				path += char
 				node = node.Child[char]
 			} else {
 				newNode := NewNode()
+				path += char
+				newNode.Path = path
 				node.Child[char] = newNode
 				node = node.Child[char]
 			}
@@ -102,6 +107,7 @@ func (dt *DigitalTree) Find(word string) (bool, interface{}) {
 
 // Walk ...
 func Walk(word string, node *Node) {
+
 	for char, childnode := range node.Child {
 		if childnode.End {
 			fullWord := word + char
