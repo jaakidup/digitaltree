@@ -1,41 +1,58 @@
 package main
 
 import (
-	"encoding/json"
 	"fmt"
-	"log"
-	"os"
 )
 
 func main() {
+
 	tree := NewDigitalTree()
 
-	tree.Add("Amy", " My Baby")
-	tree.Add("Abby", "Sweetie")
+	// tree.Add("Amy", " My Baby")
+	// tree.Add("Abby", "Sweetie")
 
+	// tree.Delete("Abby")
+
+	tree.Add("Hi", "blank")
+	tree.Add("Hit", "blank")
+	tree.Add("Hitter", "something")
 	tree.ListKeys()
 
-	file, err := os.Create("output.json")
-	if err != nil {
-		log.Fatal(err)
-	}
+	fmt.Println("||================||")
+	tree.Delete("Hitter")
+	tree.ListKeys()
 
-	jenc := json.NewEncoder(file)
+	// file, err := os.Create("output.json")
+	// if err != nil {
+	// 	log.Fatal(err)
+	// }
 
-	err = jenc.Encode(tree)
-	if err != nil {
-		log.Fatal(err)
-	}
+	// jenc := json.NewEncoder(file)
+
+	// err = jenc.Encode(tree)
+	// if err != nil {
+	// 	log.Fatal(err)
+	// }
 }
 
 // Node ...
 type Node struct {
-	Path    string           `json:"path,omitempty"`
-	Name    string           `json:"name,omitempty"`
-	Value   string           `json:"value,omitempty"`
-	End     bool             `json:"end,omitempty"`
+	Path    string      `json:"path,omitempty"`
+	Name    string      `json:"name,omitempty"`
+	Value   string      `json:"value,omitempty"`
+	End     bool        `json:"end,omitempty"`
+	Delete  bool        `json:"delete,omitempty"`
+	Payload interface{} `json:"payload,omitempty"`
+	Parent  *Node
 	Child   map[string]*Node `json:"child,omitempty"`
-	Payload interface{}      `json:"payload,omitempty"`
+}
+
+func (n *Node) hasChildren() bool {
+	if len(n.Child) == 0 {
+		return false
+	}
+	return true
+
 }
 
 // NewNode returns reference to new Node
@@ -62,28 +79,26 @@ func NewDigitalTree() *DigitalTree {
 
 // Add a word to the DigitalTree
 func (dt *DigitalTree) Add(word string, payload interface{}) {
-	found, _ := dt.Find(word)
-	if !found {
-		node := dt.Root
-		var path string
+	node := dt.Root
+	var path string
 
-		for _, letter := range word {
-			char := string(letter)
-			_, found := node.Child[char]
-			if found {
-				path += char
-				node = node.Child[char]
-			} else {
-				newNode := NewNode()
-				path += char
-				newNode.Path = path
-				node.Child[char] = newNode
-				node = node.Child[char]
-			}
+	for _, letter := range word {
+		char := string(letter)
+		_, found := node.Child[char]
+		if found {
+			path += char
+			node = node.Child[char]
+		} else {
+			newNode := NewNode()
+			path += char
+			newNode.Path = path
+			newNode.Parent = node
+			node.Child[char] = newNode
+			node = node.Child[char]
 		}
-		node.Payload = payload
-		node.End = true
 	}
+	node.Payload = payload
+	node.End = true
 }
 
 // Find by key
@@ -105,20 +120,42 @@ func (dt *DigitalTree) Find(word string) (bool, interface{}) {
 	return true, node.Payload
 }
 
-// Walk ...
-func Walk(word string, node *Node) {
-
-	for char, childnode := range node.Child {
-		if childnode.End {
-			fullWord := word + char
-			fmt.Println(fullWord, childnode.Payload)
-		} else {
-			Walk(word+char, childnode)
-		}
+// Return the last node of the word
+func (dt *DigitalTree) lastNodeOf(word string) *Node {
+	node := dt.Root
+	for _, letter := range word {
+		node = node.Child[string(letter)]
 	}
+	return node
+}
+
+// Delete a word and payload
+func (dt *DigitalTree) Delete(word string) {
+	fmt.Println("Let's try to delete", word)
+	// dt.stepUp(word, dt.lastNodeOf(word), true)
+
+	lastNode := dt.lastNodeOf(word)
+	fmt.Println("Last node", lastNode)
+
 }
 
 // ListKeys ...
 func (dt *DigitalTree) ListKeys() {
 	Walk("", dt.Root)
+}
+
+// Walk ...
+func Walk(word string, node *Node) {
+
+	for char, child := range node.Child {
+		if child.End {
+			fullWord := word + char
+			fmt.Println(fullWord, child.Payload)
+			if child.hasChildren() {
+				Walk(word+char, child)
+			}
+		} else {
+			Walk(word+char, child)
+		}
+	}
 }
