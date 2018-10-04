@@ -141,21 +141,45 @@ func (dt *DigitalTree) Delete(word string) {
 
 // ListKeys ...
 func (dt *DigitalTree) ListKeys() {
-	Walk("", dt.Root)
+
+	resultSet := &ResultSet{Name: "Results Set"}
+	Walk("", dt.Root, resultSet)
+
+	fmt.Println("Ok, let's see:")
+	var count int
+	fmt.Println(resultSet.Name)
+	for index, word := range resultSet.results {
+		fmt.Println(index, word)
+		count++
+	}
+	fmt.Printf("Found %v words\n", count)
+}
+
+// ResultSet ...
+type ResultSet struct {
+	Name    string
+	results []string
+}
+
+// NewResultSet ...
+func NewResultSet(name string) *ResultSet {
+	return &ResultSet{
+		Name:    name,
+		results: []string{},
+	}
 }
 
 // Walk ...
-func Walk(word string, node *Node) {
-
+func Walk(word string, node *Node, results *ResultSet) {
 	for char, child := range node.Child {
 		if child.End {
 			fullWord := word + char
-			fmt.Println(fullWord, child.Payload)
+			results.results = append(results.results, fullWord)
 			if child.hasChildren() {
-				Walk(word+char, child)
+				Walk(word+char, child, results)
 			}
 		} else {
-			Walk(word+char, child)
+			Walk(word+char, child, results)
 		}
 	}
 }
