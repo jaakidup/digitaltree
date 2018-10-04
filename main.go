@@ -1,50 +1,19 @@
-package main
+package digitaltree
 
 import (
 	"fmt"
 )
 
-func main() {
-
-	tree := NewDigitalTree()
-
-	// tree.Add("Amy", " My Baby")
-	// tree.Add("Abby", "Sweetie")
-
-	// tree.Delete("Abby")
-
-	tree.Add("Hi", "blank")
-	tree.Add("Hit", "blank")
-	tree.Add("Hitter", "something")
-	tree.ListKeys()
-
-	fmt.Println("||================||")
-	tree.Delete("Hitter")
-	tree.ListKeys()
-
-	// file, err := os.Create("output.json")
-	// if err != nil {
-	// 	log.Fatal(err)
-	// }
-
-	// jenc := json.NewEncoder(file)
-
-	// err = jenc.Encode(tree)
-	// if err != nil {
-	// 	log.Fatal(err)
-	// }
-}
-
 // Node ...
 type Node struct {
-	Path    string      `json:"path,omitempty"`
-	Name    string      `json:"name,omitempty"`
-	Value   string      `json:"value,omitempty"`
-	End     bool        `json:"end,omitempty"`
-	Delete  bool        `json:"delete,omitempty"`
-	Payload interface{} `json:"payload,omitempty"`
+	Path    string
+	Name    string
+	Value   string
+	End     bool
+	Delete  bool
+	Payload interface{}
 	Parent  *Node
-	Child   map[string]*Node `json:"child,omitempty"`
+	Child   map[string]*Node
 }
 
 func (n *Node) hasChildren() bool {
@@ -52,7 +21,6 @@ func (n *Node) hasChildren() bool {
 		return false
 	}
 	return true
-
 }
 
 // NewNode returns reference to new Node
@@ -64,7 +32,7 @@ func NewNode() *Node {
 
 // DigitalTree ...
 type DigitalTree struct {
-	Root *Node `json:"root,omitempty"`
+	Root *Node
 }
 
 // NewDigitalTree returns a ref to a new DigitalTree
@@ -117,6 +85,9 @@ func (dt *DigitalTree) Find(word string) (bool, interface{}) {
 			return false, nil
 		}
 	}
+	if !node.End {
+		return false, nil
+	}
 	return true, node.Payload
 }
 
@@ -131,41 +102,84 @@ func (dt *DigitalTree) lastNodeOf(word string) *Node {
 
 // Delete a word and payload
 func (dt *DigitalTree) Delete(word string) {
-	fmt.Println("Let's try to delete", word)
-	// dt.stepUp(word, dt.lastNodeOf(word), true)
-
 	lastNode := dt.lastNodeOf(word)
-	fmt.Println("Last node", lastNode)
+	deleter(lastNode, word, true)
+}
 
+// return lastLetter
+func lastLetter(word string) (bool, string) {
+	wordLength := len(word)
+	if wordLength >= 1 {
+		return true, word[wordLength-1:]
+	}
+	return false, ""
+}
+func allButLastLetter(word string) (bool, string) {
+	wordLength := len(word)
+	if wordLength > 1 {
+		return true, word[:wordLength-1]
+	}
+	return false, ""
+}
+
+// deleter
+func deleter(node *Node, word string, first bool) {
+	if !first && node.End {
+		goto DONE
+	}
+
+	if node.hasChildren() {
+		node.End = false
+		node.Payload = nil
+	}
+	if !node.hasChildren() {
+		node.End = false
+		node.Payload = nil
+
+		node = node.Parent
+
+		found, char := lastLetter(word)
+		if found {
+			delete(node.Child, char)
+			ok, nextWord := allButLastLetter(word)
+			if ok {
+				deleter(node, nextWord, false)
+			}
+		}
+	}
+DONE:
 }
 
 // ListKeys ...
-func (dt *DigitalTree) ListKeys() {
+func (dt *DigitalTree) ListKeys() *ResultSet {
 
-	resultSet := &ResultSet{Name: "Results Set"}
+	resultSet := NewResultSet("Results Set")
 	Walk("", dt.Root, resultSet)
 
 	fmt.Println("Ok, let's see:")
 	var count int
 	fmt.Println(resultSet.Name)
-	for index, word := range resultSet.results {
+	for index, word := range resultSet.Results {
 		fmt.Println(index, word)
 		count++
 	}
 	fmt.Printf("Found %v words\n", count)
+	resultSet.Count = count
+	return resultSet
 }
 
 // ResultSet ...
 type ResultSet struct {
-	Name    string
-	results []string
+	Name    string        `json:"name,omitempty"`
+	Count   int           `json:"count,omitempty"`
+	Results []interface{} `json:"results,omitempty"`
 }
 
 // NewResultSet ...
 func NewResultSet(name string) *ResultSet {
 	return &ResultSet{
 		Name:    name,
-		results: []string{},
+		Results: []interface{}{},
 	}
 }
 
@@ -174,7 +188,7 @@ func Walk(word string, node *Node, results *ResultSet) {
 	for char, child := range node.Child {
 		if child.End {
 			fullWord := word + char
-			results.results = append(results.results, fullWord)
+			results.Results = append(results.Results, fullWord)
 			if child.hasChildren() {
 				Walk(word+char, child, results)
 			}
